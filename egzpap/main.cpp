@@ -35,45 +35,46 @@ void countFrequencies(const std::string& str, std::unordered_map<std::string, in
 
 void CrossRef(const string& filename,
               const unordered_map<string, int>& freq,
-              unordered_map<string, vector<int>>& linesByWord) {
+              unordered_map<string, vector<int>>& linesByWord)
+{
+    ifstream in(filename);
+    if (!in) { cerr << "Cannot open: " << filename << "\n"; return; }
 
-                ifstream in (filename);
-                string line;
-                int lineNumber = 0;
-                while (getline(in, line)) {
-                    lineNumber++;
-                    string word;
-                    for (char c : line) {
-                        if(isWordChar(c)) {
-                            word += std::tolower(c);
-                        } else if (!word.empty()) {
-                            auto it = freq.find(word);
-                            if (it != freq.end() && it->second > 1) {
-                                auto &vec = linesByWord[word];
-                                if (vec.empty() || vec.back() != lineNumber) {
-                                    vec.push_back(lineNumber);
-                                }
-                            }
-                            word.clear();
-                        }
-                    }
-                    if (!word.empty()) {
-                        auto it = freq.find(word);
-                        if (it != freq.end() && it->second > 1) {
-                            auto &vec = linesByWord[word];
-                            if (vec.empty() || vec.back() != lineNumber) {
-                                vec.push_back(lineNumber);
-                            }
-                        }
-                    }
-                }
+    string line;
+    int lineNumber = 0;
 
-              }
+    while (getline(in, line)) {
+        ++lineNumber;
+        string word;
+
+        auto commit = [&]() {
+            if (word.empty()) return;
+
+            if (freq.count(word) && freq.at(word) > 1) {
+                auto &vec = linesByWord[word];
+                if (vec.empty() || vec.back() != lineNumber)
+                    vec.push_back(lineNumber);
+            }
+            word.clear();
+        };
+
+        for (unsigned char c : line) {
+            if (isWordChar(c)) {
+                word += static_cast<char>(tolower(c));
+            } else {
+                commit();
+            }
+        }
+        commit();
+    }
+}
+
+
 
 int main() {
     std::unordered_map<std::string, int> freq;
     
-    countFrequencies("input.txt", freq);
+    countFrequencies("input2.txt", freq);
 
     std::vector<std::pair<std::string, int>> items;
     items.reserve(freq.size());
@@ -89,12 +90,11 @@ int main() {
 
 
     std::unordered_map<std::string, std::vector<int>> linesByWord;
-    CrossRef("input.txt", freq, linesByWord);
-
+    CrossRef("input2.txt", freq, linesByWord);
 
     std::ofstream out("rezultatai.txt");
     for (auto &p : items) {
-        out << p.first << " " << p.second << ":";
+        out << p.first << " " << p.second << ": ";
 
         auto it = linesByWord.find(p.first);
         if (it != linesByWord.end()) {
